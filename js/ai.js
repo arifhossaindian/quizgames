@@ -58,7 +58,7 @@ Rules: mcq "answer" = index 0-3 of the correct option; no duplicate questions; m
   /* ---------- validation ---------- */
   const s = v => String(v ?? '').replace(/[<>]/g, '').trim();
 
-  function validateQuestion(q) {
+    function validateQuestion(q) {
     if (!q || typeof q !== 'object') return null;
     const img = safeUrl(q.img || q.image), audio = safeUrl(q.audio), video = safeUrl(q.video);
     if (q.type === 'mcq') {
@@ -74,6 +74,13 @@ Rules: mcq "answer" = index 0-3 of the correct option; no duplicate questions; m
       return s(q.q) && s(q.answer) ? { type: 'word', q: s(q.q), answer: s(q.answer), hint: s(q.hint) || undefined, img, audio, video } : null;
     if (q.type === 'opposite')
       return (s(q.word) || s(q.q)) && s(q.answer) ? { type: 'opposite', word: s(q.word || q.q), answer: s(q.answer) } : null;
+    if (q.type === 'tf') {
+      if (!s(q.q)) return null;
+      let a = q.answer;
+      if (typeof a === 'string') a = /^(true|yes|1|yes|হ্যাঁ|সত্য|সঠিক)$/i.test(a.trim());
+      else a = !!a;
+      return { type: 'tf', q: s(q.q), answer: a ? 1 : 0, hint: s(q.hint) || undefined, img, audio, video };
+    }
     return null;
   }
   function validatePack(obj) {
