@@ -169,7 +169,8 @@ const App = (() => {
     const nM = h('input.inp', { type: 'number', min: '0', max: '25', value: '5' });
     const nW = h('input.inp', { type: 'number', min: '0', max: '25', value: '5' });
     const nO = h('input.inp', { type: 'number', min: '0', max: '25', value: '5' });
-    const getN = () => ({ mcq: Math.max(0, +nM.value || 0), word: Math.max(0, +nW.value || 0), opp: Math.max(0, +nO.value || 0) });
+    const nTF = h('input.inp', { type: 'number', min: '0', max: '25', value: '5' });
+    const getN = () => ({ mcq: Math.max(0, +nM.value || 0), word: Math.max(0, +nW.value || 0), opp: Math.max(0, +nO.value || 0), tf: Math.max(0, +nTF.value || 0) });
     const topics = () => [...chosen, ...custom.value.split(',').map(x => x.trim()).filter(Boolean)].join(', ');
 
     let pack = null;
@@ -216,7 +217,7 @@ const App = (() => {
         h('p.muted', {}, '🎯 Topics tick করো (একাধিক selectable) + 🎲 Random + নিজের topic:'),
         chipWrap, h('div.row', { style: { marginTop: '10px' } }, rndBtn),
         h('div.row', {}, h('label.field', {}, '✍️ Custom topics', custom), h('label.field', {}, '🎓 Class', grade)),
-        h('div.row', {}, h('label.field', {}, '🌐 Language', lang), h('label.field', {}, 'MCQ', nM), h('label.field', {}, 'Word', nW), h('label.field', {}, 'Opposite', nO)),
+        h('div.row', {}, h('label.field', {}, '🌐 Language', lang), h('label.field', {}, 'MCQ', nM), h('label.field', {}, 'Word', nW), h('label.field', {}, 'Opposite', nO), h('label.field', {}, 'T/F', nTF)),
         h('div.segwrap', { style: { margin: '14px 0' } }, tA, tB), autoPane, manPane,
         h('h4', {}, 'Preview'), preview),
       actions: [{
