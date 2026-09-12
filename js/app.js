@@ -235,4 +235,116 @@ const App = (() => {
       }
       if (n) { SFX.correct(); toast(`${n}টা ছবি যোগ হয়েছে — এখন Label (উত্তর) বসাও!`, 'success'); redraw(); }
     }
-    const dz = h('div.drop
+    const dz = h('div.dropzone', {
+      ondragover: e => { e.preventDefault(); dz.classList.add('dz-over'); },
+      ondragleave: () => dz.classList.remove('dz-over'),
+      ondrop: e => { e.preventDefault(); dz.classList.remove('dz-over'); addFiles(e.dataTransfer.files); }
+    },
+      h('div.dropzone__icon', {}, '🖼️'),
+      h('b', {}, 'ছবি এখানে drag & drop করো'), ' অথবা ',
+      h('button.btn.btn--ghost.btn--sm', { onclick: () => fileInp.click() }, 'Browse files'), fileInp,
+      h('p.hint', {}, 'প্রতিটা ছবির Label ই হলো উত্তর। ছবি auto-compress হয়ে device-এ থাকে।'));
+
+    root.append(h('section.page', {},
+      h('div.pagehead', {}, h('div', {}, h('h2', {}, '🖼️ Image Lab'),
+        h('p.muted', {}, 'Guess the Image গেমের ছবি এখানে manage করো'))),
+      dz, grid));
+    redraw();
+  }
+
+  /* ---------------- SETTINGS ---------------- */
+  function viewSettings(root) {
+    const s = DB.state.settings;
+    const keyI = h('input.inp', {
+      type: 'password', value: s.apiKey || '', placeholder: 'gsk_…',
+      onchange: e => { s.apiKey = e.target.value.trim(); DB.save(); toast('API key saved (local)', 'success'); }
+    });
+    const modelS = h('select.inp', { onchange: e => { s.model = e.target.value; DB.save(); } },
+      AI.MODELS.map(m => h('option', { value: m }, m)));
+    modelS.value = s.model || AI.MODELS[0];
+    const testB = h('button.btn.btn--ghost.btn--sm', {
+      onclick: async e => {
+        e.target.disabled = true; e.target.textContent = 'Testing…';
+        try { await AI.ping(s.apiKey, s.model); toast('✅ Groq connection OK!', 'success'); SFX.correct(); }
+        catch (err) { toast('❌ ' + err.message, 'error', 6000); }
+        e.target.disabled = false; e.target.textContent = 'Test connection';
+      }
+    }, 'Test connection');
+
+    const secI = h('input.inp', { type: 'number', min: '5', max: '600', value: s.timerSec, onchange: e => { s.timerSec = Math.max(5, +e.target.value || 30); DB.save(); } });
+    const modeS = h('select.inp', { onchange: e => { s.timerMode = e.target.value; DB.save(); } },
+      h('option', { value: 'auto' }, '⚡ Auto'), h('option', { value: 'manual' }, '✋ Manual'));
+    modeS.value = s.timerMode;
+
+    const cloudOn = DB.cloud.enabled();
+    const importInp = h('input.hide', {
+      type: 'file', accept: '.json', onchange: async e => {
+        try {
+          const d = JSON.parse(await e.target.files[0].text());
+          const packs = Array.isArray(d) ? d : (d.packs || [d]);
+          let n = 0;
+          packs.forEach(p => { try { DB.addPack(AI.validatePack(p)); n++; } catch (err) { } });
+          toast(`${n} pack imported`, 'success'); render();
+        } catch (err) { toast('Import failed: ' + err.message, 'error'); }
+        e.target.value = '';
+      }
+    });
+
+    root.append(h('section.page', {},
+      h('div.pagehead', {}, h('div', {}, h('h2', {}, '⚙️ Settings'))),
+      h('div.settings-grid', {},
+        h('div.scard', {}, h('h3', {}, '🤖 Groq AI'),
+          h('label.field', {}, 'API key', keyI),
+          h('label.field', {}, 'Model', modelS),
+          h('div.row', {}, testB),
+          h('p.hint', {}, 'Key শুধু এই browser-এ save হয়। ⚠️ Public সাইটে key source-এ দেখা যায় — তাই classroom-এর জন্য আলাদা key বানিও, প্রয়োজনে Firebase Function proxy ব্যবহার করো।')),
+        h('div.scard', {}, h('h3', {}, '⏱ Timer defaults'),
+          h('label.field', {}, 'Seconds per question', secI),
+          h('label.field', {}, 'Mode', modeS),
+          h('label.check', {}, h('input', { type: 'checkbox', ...(SFX.muted ? {} : { checked: '' }), onchange: e => { const m = e.target.checked ? SFX.toggle() : SFX.toggle(); $('#btn-sound').textContent = SFX.muted ? '🔇' : '🔊'; } }), ' Sound effects'),
+          h('p.hint', {}, 'Auto = প্রশ্ন দেখালেই timer চালু · Manual = প্রতি প্রশ্নে GO চাপতে হয়।')),
+        h('div.scard', {}, h('h3', {}, '☁️ Cloud (Firebase)'),
+          h('p', {}, cloudOn ? h('span.badge', {}, 'Enabled') : h('span.chip', {}, 'Disabled (local storage mode)'),
+            cloudOn && DB.state.lastSync ? ` · last sync ${new Date(DB.state.lastSync).toLocaleString()}` : ''),
+          h('p.hint', {}, cloudOn ? 'Packs + settings Firestore-এ sync হচ্ছে।' : 'js/firebase-config.js এ config দিয়ে FIREBASE_SYNC = true করো, আর index.html-এ firebase scripts uncomment করো। README-তে step-by-step আছে।'),
+          cloudOn ? h('button.btn.btn--ghost.btn--sm', {
+            onclick: async e => { e.target.textContent = 'Syncing…'; await DB.cloud.pull(); await DB.cloud.push(); e.target.textContent = '🔄 Sync now'; render(); }
+          }, '🔄 Sync now') : null),
+        h('div.scard', {}, h('h3', {}, '💾 Data'),
+          h('div.row', {},
+            h('button.btn.btn--ghost.btn--sm', {
+              onclick: () => download('quizarena-backup.json', JSON.stringify({ packs: DB.state.packs, settings: { ...s, apiKey: '' } }, null, 2))
+            }, '⬇ Export backup'),
+            h('button.btn.btn--ghost.btn--sm', { onclick: () => importInp.click() }, '⬆ Import backup'), importInp),
+          h('div.row', { style: { marginTop: '10px' } },
+            h('button.btn.btn--danger.btn--sm', {
+              onclick: async () => {
+                if (!await confirmDlg('সব pack ও image মুছে যাবে! Export করে রেখেছো?')) return;
+                DB.state.packs = []; DB.save();
+                (await DB.allImages()).forEach(im => DB.delImage(im.id));
+                toast('All data cleared'); render();
+              }
+            }, '🗑 Clear all data'))))));
+  }
+
+  /* ---------------- boot ---------------- */
+  function start() {
+    $$('[data-nav]').forEach(b => b.addEventListener('click', () => App.go(b.dataset.nav)));
+    const sb = $('#btn-sound');
+    sb.textContent = SFX.muted ? '🔇' : '🔊';
+    sb.addEventListener('click', () => { SFX.toggle(); sb.textContent = SFX.muted ? '🔇' : '🔊'; });
+    addEventListener('hashchange', render);
+    render();
+  }
+
+  return {
+    start,
+    go: v => { SFX.click(); location.hash = v; },
+    replay: () => render()
+  };
+})();
+
+document.addEventListener('DOMContentLoaded', async () => {
+  await DB.init();
+  App.start();
+});
