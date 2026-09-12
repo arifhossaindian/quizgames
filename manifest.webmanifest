@@ -1,0 +1,9 @@
+{
+  "name": "QuizArena — Classroom Game Hub",
+  "short_name": "QuizArena",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#05070f",
+  "theme_color": "#05070f",
+  "icons": [{ "src": "icon.svg", "type": "image/svg+xml", "sizes": "any" }]
+}
