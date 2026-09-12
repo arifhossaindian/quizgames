@@ -306,3 +306,44 @@ select.inp option{background:#0a0f22}
 .toast--success{border-left-color:var(--good)}
 .toast--error{border-left-color:var(--bad)}
 .confetti-canvas{position:fixed;inset:0;z-index:300;pointer-events:none}
+/* ===== Builder (Word Builder) ===== */
+.builder-slots{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:20px 0 10px}
+.builder-slot{min-width:44px;height:52px;border:2px solid var(--line);border-radius:12px;background:rgba(139,92,246,.08);
+  display:grid;place-items:center;font:900 28px 'Outfit';color:#fff;cursor:pointer;transition:.18s;text-transform:uppercase}
+.builder-slot:empty{border-style:dashed}
+.builder-slot--good{background:rgba(34,197,94,.2);border-color:var(--good);animation:pulse .5s}
+.builder-slot--bad{background:rgba(239,68,68,.2);border-color:var(--bad);animation:shake .5s}
+.builder-letters{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:10px 0 14px}
+.builder-letter{min-width:44px;height:52px;border:1px solid var(--line);border-radius:12px;background:var(--glass2);
+  color:#fff;font:900 24px 'Outfit';cursor:pointer;transition:.18s;text-transform:uppercase}
+.builder-letter:hover:not(:disabled){background:rgba(139,92,246,.2);transform:translateY(-3px)}
+.builder-letter:disabled{opacity:.3;cursor:default}
+
+/* ===== Word Gap ===== */
+.gap-display{display:flex;gap:4px;justify-content:center;flex-wrap:wrap;margin:20px 0 16px}
+.gap-display .builder-gap{min-width:38px;height:48px;border:2px solid var(--line);border-radius:10px;background:rgba(139,92,246,.08);
+  display:grid;place-items:center;font:800 22px 'Outfit';color:#fff;text-align:center;text-transform:uppercase}
+.gap-display input.builder-gap{padding:0;font-size:22px}
+.gap-display span.builder-gap:not(:empty){background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.15)}
+.gap-display .builder-gap--good,.gap-display input.builder-gap.builder-slot--good{background:rgba(34,197,94,.2);border-color:var(--good)}
+.gap-display .builder-gap--bad,.gap-display input.builder-gap.builder-slot--bad{background:rgba(239,68,68,.2);border-color:var(--bad)}
+
+/* ===== True/False buttons ===== */
+.opt--tf{flex-direction:column;min-height:100px}
+.opt--tf .opt__key{font-size:32px;background:rgba(255,255,255,.08)}
+
+/* ===== Mood Mode ===== */
+.mood-games{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin:14px 0}
+.mood-card{position:relative;display:flex;align-items:center;gap:10px;padding:14px;border-radius:14px;border:1px solid var(--line);
+  background:var(--glass);cursor:pointer;transition:.18s;opacity:.5}
+.mood-card.on{opacity:1;background:linear-gradient(135deg,rgba(139,92,246,.15),rgba(6,182,212,.1));border-color:var(--acc)}
+.mood-card:hover{transform:translateY(-2px)}
+.mood-card input{position:absolute;top:8px;right:8px}
+.mood-card__icon{font-size:26px}
+.mood-card__name{font:700 13px 'Outfit'}
+.mood-banner{display:flex;align-items:center;gap:12px;justify-content:center;background:linear-gradient(135deg,rgba(139,92,246,.2),rgba(6,182,212,.15));
+  border:1px solid var(--line);border-radius:14px;padding:10px 20px;margin:10px 0;font:800 17px 'Outfit';animation:fadeUp .3s}
+.mood-banner span{font-size:28px}
+
+/* ===== Game card new colors ===== */
+.gc--c7{--c:#fbbf24}
