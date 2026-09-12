@@ -31,7 +31,7 @@ function packSetup(root, { title, icon, types, onStart }) {
   const packs = DB.packsFor(types);
   if (!packs.length) {
     root.append(emptyState(icon, 'No questions yet!',
-      `এই গেমের জন্য "${types.join(' / '}" টাইপের প্রশ্ন লাগবে। Bulk upload বা AI দিয়ে pack বানাও।`,
+      `এই গেমের জন্য "${types.join(' / ')}" টাইপের প্রশ্ন লাগবে। Bulk upload বা AI দিয়ে pack বানাও।`,
       [{ label: '📦 Open Question Packs', kind: 'primary', onClick: () => App.go('packs') }]));
     return;
   }
@@ -137,7 +137,7 @@ class Session {
     this.prog.textContent = `Q ${i + 1} / ${this.items.length}`;
     this.nextBtn.classList.add('hide');
     this.card.className = 'qcard';
-    void this.card.offsetWidth;                       // restart animation
+    void this.card.offsetWidth;
     this.card.classList.add('in');
     const api = { answer: (ok, text) => this.onAnswered(ok, text), isLocked: () => this.answered };
     this.card.append(this.renderFn(this.items[i], api));
@@ -233,7 +233,7 @@ const SpinGame = {
       ctx.beginPath(); ctx.arc(c, c, 52, 0, 7);
       ctx.fillStyle = '#0b1020'; ctx.fill();
       ctx.strokeStyle = 'rgba(255,255,255,.25)'; ctx.lineWidth = 4; ctx.stroke();
-      ctx.fillStyle = '#fff'; ctx.font = "800 24px Outfit, sans-serif"; ctx.textAlign = 'center';
+      ctx.fillStyle = '#fff'; ctx.font = "800 24px Outfit, sans-serif"; ctx.textAlign = "center";
       ctx.fillText('SPIN', c, c);
     }
     function spin() {
