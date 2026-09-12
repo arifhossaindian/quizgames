@@ -4,14 +4,19 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>QuizArena — Classroom Game Hub</title>
-  <meta name="description" content="All-in-one classroom quiz game hub: spin the roll, guess the image, guess the word, wrong-answer-only, opposites & more." />
+  <meta name="description" content="All-in-one classroom quiz game hub: spin, guess image, word, opposites, wrong-answer-only & more. Works offline!" />
+  <meta name="theme-color" content="#05070f" />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎮</text></svg>" />
+  <link rel="manifest" href="manifest.webmanifest" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800;900&family=Noto+Sans+Bengali:wght@400;600;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/style.css" />
-
-  <!-- ☁️ OPTIONAL Firebase cloud sync: js/firebase-config.js এ config দেওয়ার পর এই দুটো লাইন uncomment করো
+  <!-- LaTeX (online থাকলে সুন্দর math দেখাবে, offline হলে সাধারণ text) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
+  <!-- ☁️ Firebase চাইলে: config দেওয়ার পর নিচের ২ লাইন uncomment করো
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
   -->
