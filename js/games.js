@@ -1,9 +1,6 @@
 'use strict';
-/* ============================================================
- * QuizArena · the six games
- * ============================================================ */
+/* ============ QuizArena · the six games ============ */
 
-/* ---------- shared: timer settings block ---------- */
 function TimerSettings(def) {
   let sec = +(def.timerSec || 30), mode = def.timerMode || 'auto';
   const hintEl = h('p.hint', {});
@@ -13,9 +10,7 @@ function TimerSettings(def) {
     mode = m;
     bA.classList.toggle('on', m === 'auto');
     bM.classList.toggle('on', m === 'manual');
-    hintEl.textContent = m === 'auto'
-      ? 'Auto: প্রতি প্রশ্নে timer নিজেই চালু হবে।'
-      : 'Manual: প্রতি প্রশ্নে timer-এর GO বাটন চাপতে হবে।';
+    hintEl.textContent = m === 'auto' ? 'Auto: প্রতি প্রশ্নে timer নিজেই চালু হবে।' : 'Manual: প্রতি প্রশ্নে GO চাপতে হবে।';
     SFX.click();
   }
   const inp = h('input.inp', { type: 'number', min: '5', max: '600', value: sec, oninput: e => sec = +e.target.value });
@@ -26,12 +21,21 @@ function TimerSettings(def) {
   };
 }
 
-/* ---------- shared: pack-based game setup screen ---------- */
-function packSetup(root, { title, icon, types, onStart }) {
+function copyPromptBtn(kind) {
+  return h('button.btn.btn--ghost', {
+    onclick: () => {
+      navigator.clipboard.writeText(AI.gamePrompt(kind));
+      SFX.reveal();
+      toast('📋 Prompt copied! যেকোনো AI chat-এ paste করো, AI-এর উত্তরটা Question Packs → Bulk Upload-এ paste করলেই হয়ে যাবে।', 'success', 6000);
+    }
+  }, '📋 Copy AI Prompt');
+}
+
+function packSetup(root, { title, icon, types, promptKind, onStart }) {
   const packs = DB.packsFor(types);
   if (!packs.length) {
     root.append(emptyState(icon, 'No questions yet!',
-      `এই গেমের জন্য "${types.join(' / ')}" টাইপের প্রশ্ন লাগবে। Bulk upload বা AI দিয়ে pack বানাও।`,
+      'এই গেমের জন্য প্রশ্ন লাগবে। Bulk upload, Google Sheet বা AI দিয়ে pack বানাও।',
       [{ label: '📦 Open Question Packs', kind: 'primary', onClick: () => App.go('packs') }]));
     return;
   }
@@ -57,14 +61,14 @@ function packSetup(root, { title, icon, types, onStart }) {
         onStart(qs, tset.get());
       }
     }, '🚀 START GAME'),
-    h('button.btn.btn--ghost', { onclick: () => App.go('packs') }, '📦 Manage packs ➜'))));
+    h('div.row', {}, copyPromptBtn(promptKind), h('button.btn.btn--ghost', { onclick: () => App.go('packs') }, '📦 Manage packs ➜')))));
 }
 
-/* ---------- shared: question renderers ---------- */
+/* ---------- renderers (rich text + media support) ---------- */
 function mcqRender(q, api, { invert = false } = {}) {
   q._reveal = q.options[q.answer];
   const btns = q.options.map((opt, ix) => h('button.opt', { onclick: () => pick(ix) },
-    h('span.opt__key', {}, 'ABCDEF'[ix]), h('span.opt__txt', {}, opt)));
+    h('span.opt__key', {}, 'ABCDEF'[ix]), h('span.opt__txt', { html: richText(opt) })));
   function pick(ix) {
     if (api.isLocked()) return;
     const isTrue = ix === q.answer, ok = invert ? !isTrue : isTrue;
@@ -75,21 +79,22 @@ function mcqRender(q, api, { invert = false } = {}) {
       if (j === ix && ok) b.classList.add('opt--right');
     });
     api.answer(ok, invert
-      ? (ok ? `✔ ঠিক ধরেছো — এটা একটা WRONG answer! (আসল উত্তর ছিল: ${q.options[q.answer]})`
+      ? (ok ? `✔ ঠিক ধরেছো — এটা একটা WRONG answer! (আসল উত্তর: ${q.options[q.answer]})`
             : `✖ তুমি তো সঠিক উত্তরটাই বেছে নিলে! (সঠিক উত্তর: ${q.options[q.answer]})`)
       : (ok ? '✔ Correct! 🎉' : 'Answer: ' + q.options[q.answer]));
   }
   return h('div.mcq', {},
     invert ? h('div.rule-banner', {}, '🚫 WRONG ANSWER ONLY — ভুল অপশনটা বেছে নাও!') : null,
-    h('div.qtext', {}, q.q),
-    q.hint ? h('div.qhint', {}, '💡 ' + q.hint) : null,
+    h('div.qtext', { html: richText(q.q) }),
+    mediaEl(q),
+    q.hint ? h('div.qhint', { html: '💡 ' + richText(q.hint) }) : null,
     h('div.opts', {}, btns));
 }
 
 function typeRender({ prompt, big, banner, q, api }) {
   q._reveal = String(q.answer).split('|')[0];
   const input = h('input.inp.inp--lg', { placeholder: 'Type answer…', autocomplete: 'off', autocapitalize: 'off', spellcheck: 'false' });
-  const hintBox = h('div.qhint.hide', {}, '💡 ' + (q.hint || ''));
+  const hintBox = h('div.qhint.hide', { html: '💡 ' + richText(q.hint || '') });
   const check = () => {
     if (api.isLocked()) return;
     const ok = accepts(input.value, q.answer);
@@ -99,7 +104,8 @@ function typeRender({ prompt, big, banner, q, api }) {
   };
   return h('div.typeq', {},
     banner ? h('div.rule-banner', {}, banner) : null,
-    h('div.qtext' + (big ? '.qtext--xl' : ''), {}, prompt),
+    h('div.qtext' + (big ? '.qtext--xl' : ''), { html: richText(prompt) }),
+    mediaEl(q),
     q.hint ? h('button.btn.btn--ghost.btn--sm', { onclick: () => { hintBox.classList.remove('hide'); SFX.reveal(); } }, '💡 Hint') : null,
     hintBox,
     h('form.answer-form', { onsubmit: e => { e.preventDefault(); check(); } },
@@ -107,7 +113,7 @@ function typeRender({ prompt, big, banner, q, api }) {
     h('button.btn.btn--ghost', { onclick: () => { if (!api.isLocked()) { input.disabled = true; api.answer(false, 'Answer: ' + q._reveal); } } }, '👁 Reveal'));
 }
 
-/* ---------- shared: session engine (progress, score, timer, end screen) ---------- */
+/* ---------- session engine ---------- */
 class Session {
   constructor({ title, items, timer, render }) {
     this.items = items; this.renderFn = render;
@@ -127,11 +133,7 @@ class Session {
       h('div.session__bottom', {}, this.nextBtn));
     this.timer = new Timer(timerMount, { ...timer, onEnd: () => this.timeout() });
   }
-  mount(root) {
-    root.append(this.ui);
-    window.__qaCleanup = () => this.timer.destroy();
-    this.show(0);
-  }
+  mount(root) { root.append(this.ui); window.__qaCleanup = () => this.timer.destroy(); this.show(0); }
   show(i) {
     this.i = i; this.answered = false;
     this.prog.textContent = `Q ${i + 1} / ${this.items.length}`;
@@ -141,6 +143,7 @@ class Session {
     this.card.classList.add('in');
     const api = { answer: (ok, text) => this.onAnswered(ok, text), isLocked: () => this.answered };
     this.card.append(this.renderFn(this.items[i], api));
+    renderMathIn(this.card);
     this.timer.arm();
   }
   onAnswered(ok, bannerText) {
@@ -161,10 +164,7 @@ class Session {
     this.card.append(h('div.reveal.reveal--bad', {}, `⏰ Time up! Answer: ${this.items[this.i]._reveal || '—'}`));
     this.nextBtn.classList.remove('hide');
   }
-  next() {
-    SFX.click();
-    this.i + 1 < this.items.length ? this.show(this.i + 1) : this.finish();
-  }
+  next() { SFX.click(); this.i + 1 < this.items.length ? this.show(this.i + 1) : this.finish(); }
   quit() { this.timer.destroy(); window.__qaCleanup = null; App.go('home'); }
   finish() {
     this.timer.destroy(); window.__qaCleanup = null;
@@ -181,12 +181,10 @@ class Session {
   }
 }
 
-/* ============================================================
- * 🎡 GAME 1 — Spin the Roll
- * ============================================================ */
+/* 🎡 GAME 1 — Spin the Roll */
 const SpinGame = {
   id: 'spin', name: 'Spin the Roll', icon: '🎡', color: 'c1',
-  desc: 'Roll number দিয়ে student pick করো — default 1–40, range যেকোনো হতে পারে।',
+  desc: 'Roll number দিয়ে student pick — default 1–40। যেকোনো পেজে ডান-নিচের 🎡 বাটনও আছে!',
   mount(root) {
     let min = 1, max = 40, angle = 0, spinning = false, hue = 0;
     const removed = new Set();
@@ -198,7 +196,6 @@ const SpinGame = {
     const remC = h('input', { type: 'checkbox' });
     const minI = h('input.inp', { type: 'number', value: '1', onchange: apply });
     const maxI = h('input.inp', { type: 'number', value: '40', onchange: apply });
-
     const nums = () => { const a = []; for (let n = min; n <= max; n++) if (!removed.has(n)) a.push(n); return a; };
     function apply() {
       min = Math.max(0, Math.round(+minI.value || 0));
@@ -222,8 +219,7 @@ const SpinGame = {
         ctx.fillStyle = `hsl(${(i * 360 / N + hue) % 360} 68% ${i % 2 ? 40 : 52}%)`;
         ctx.fill();
         ctx.strokeStyle = 'rgba(0,0,0,.25)'; ctx.lineWidth = 2; ctx.stroke();
-        ctx.save();
-        ctx.rotate((i + .5) * seg);
+        ctx.save(); ctx.rotate((i + .5) * seg);
         ctx.fillStyle = '#fff';
         ctx.font = `800 ${Math.min(40, Math.max(13, 560 / N))}px Outfit, sans-serif`;
         ctx.fillText(list[i] ?? '', R - 16, 0);
@@ -233,7 +229,7 @@ const SpinGame = {
       ctx.beginPath(); ctx.arc(c, c, 52, 0, 7);
       ctx.fillStyle = '#0b1020'; ctx.fill();
       ctx.strokeStyle = 'rgba(255,255,255,.25)'; ctx.lineWidth = 4; ctx.stroke();
-      ctx.fillStyle = '#fff'; ctx.font = "800 24px Outfit, sans-serif"; ctx.textAlign = "center";
+      ctx.fillStyle = '#fff'; ctx.font = '800 24px Outfit, sans-serif'; ctx.textAlign = 'center';
       ctx.fillText('SPIN', c, c);
     }
     function spin() {
@@ -268,16 +264,15 @@ const SpinGame = {
     }
     function renderPicked() {
       picked.replaceChildren(...[...removed].map(n =>
-        h('span.chip.chip--picked', { title: 'ফিরিয়ে আনতে ক্লিক করো', onclick: () => { removed.delete(n); draw(); renderPicked(); SFX.click(); } }, '#' + n + ' ✕')));
+        h('span.chip.chip--picked', { onclick: () => { removed.delete(n); draw(); renderPicked(); SFX.click(); } }, '#' + n + ' ✕')));
     }
-
     root.append(h('section.page', {}, h('div.spinwrap', {},
       h('div.wheel-box', {}, canvas, h('div.wheel-pointer'), res),
       h('div.spin-side', {},
         h('h2', {}, '🎡 Spin the Roll'),
-        h('p.muted', {}, 'SPIN চাপো — wheel ঘুরে একটা roll number বেছে দেবে। ক্লাসে student pick করার জন্য perfect!'),
+        h('p.muted', {}, 'SPIN চাপো — wheel ঘুরে roll number বেছে দেবে।'),
         h('div.row', {}, h('label.field', {}, 'From (min)', minI), h('label.field', {}, 'To (max)', maxI)),
-        h('label.check', {}, remC, ' Winner wheel থেকে বাদ দাও (একাধিক student pick)'),
+        h('label.check', {}, remC, ' Winner wheel থেকে বাদ দাও'),
         spinBtn,
         h('p.muted', { style: { marginTop: '16px' } }, 'Picked:'),
         picked,
@@ -286,9 +281,7 @@ const SpinGame = {
   }
 };
 
-/* ============================================================
- * 🖼️ GAME 2 — Guess the Image
- * ============================================================ */
+/* 🖼️ GAME 2 — Guess the Image */
 function imgRender(q, api, pool) {
   q._reveal = q.label;
   const visual = h('div.gimg-wrap', {}, h('img.gimg', { src: q.data, alt: '?' }));
@@ -297,7 +290,7 @@ function imgRender(q, api, pool) {
   if (others.length >= 3) {
     const opts = shuffle([q.label, ...others]);
     const btns = opts.map((o, ix) => h('button.opt', { onclick: () => pick(ix) },
-      h('span.opt__key', {}, 'ABCD'[ix]), h('span.opt__txt', {}, o)));
+      h('span.opt__key', {}, 'ABCD'[ix]), h('span.opt__txt', { html: richText(o) })));
     function pick(ix) {
       if (api.isLocked()) return;
       const ok = norm(opts[ix]) === norm(q.label);
@@ -321,17 +314,17 @@ function imgRender(q, api, pool) {
       }
     }, input, h('button.btn.btn--primary.btn--lg', { type: 'submit' }, 'Check ✔'));
   }
-  return h('div.imgq', {}, visual, q.hint ? h('div.qhint', {}, '💡 ' + q.hint) : null, answerUI);
+  return h('div.imgq', {}, visual, q.hint ? h('div.qhint', { html: '💡 ' + richText(q.hint) }) : null, answerUI);
 }
 
 const ImageGame = {
   id: 'image', name: 'Guess the Image', icon: '🖼️', color: 'c2',
-  desc: 'তোমার upload করা ছবি random দেখাবে — সঠিক label বেছে নাও!',
+  desc: 'Upload করা বা link করা ছবি random দেখাবে — সঠিক label বেছে নাও!',
   async mount(root) {
     const imgs = (await DB.allImages()).filter(i => i.data);
     if (!imgs.length) {
       root.append(emptyState('🖼️', 'Image library খালি!',
-        'Image Lab থেকে ছবি upload করো, প্রতিটার Label (= উত্তর) দাও, তারপর খেলো।',
+        'Image Lab-এ ছবি upload করো বা image link import করো, Label (= উত্তর) দাও, তারপর খেলো।',
         [{ label: '🖼️ Open Image Lab', kind: 'primary', onClick: () => App.go('images') }]));
       return;
     }
@@ -349,7 +342,6 @@ const ImageGame = {
     let count = Math.min(10, imgs.length);
     const countEl = h('input.inp', { type: 'number', min: '1', value: count, oninput: e => count = +e.target.value || 1 });
     const tset = TimerSettings(DB.state.settings);
-
     root.append(h('section.page', {}, h('div.setup', {},
       h('div.setup__head', {}, h('div.setup__icon', {}, '🖼️'),
         h('div', {}, h('h2', {}, 'Guess the Image'), h('p.muted', {}, 'যে ছবিগুলো খেলাবে tick করো (label = উত্তর)'))),
@@ -366,53 +358,47 @@ const ImageGame = {
           new Session({ title: '🖼️ Guess the Image', items, timer: tset.get(), render: (q, api) => imgRender(q, api, labels) }).mount(root);
         }
       }, '🚀 START GAME'),
-      h('button.btn.btn--ghost', { onclick: () => App.go('images') }, '🖼️ Manage library ➜'))));
+      h('div.row', {}, copyPromptBtn('image'), h('button.btn.btn--ghost', { onclick: () => App.go('images') }, '🖼️ Manage library ➜')))));
   }
 };
 
-/* ============================================================
- * 🔤 GAME 3 — Guess the Word   🚫 GAME 4 — Wrong Answer Only
- * 🔁 GAME 5 — Opposite Words   🧠 GAME 6 — Classic Quiz
- * ============================================================ */
+/* 🔤🔁 GAMES 3-6 */
 const WordGame = {
   id: 'word', name: 'Guess the Word', icon: '🔤', color: 'c3',
-  desc: 'Clue পড়ে উত্তর guess করো — টাইপ করো বা Reveal চাপো।',
+  desc: 'Clue পড়ে word guess করো — type করো বা Reveal চাপো।',
   mount(root) {
     packSetup(root, {
-      title: 'Guess the Word', icon: '🔤', types: ['word'],
+      title: 'Guess the Word', icon: '🔤', types: ['word'], promptKind: 'word',
       onStart: (items, timer) => new Session({ title: '🔤 Guess the Word', items, timer, render: (q, api) => typeRender({ prompt: q.q, q, api }) }).mount(root)
     });
   }
 };
-
 const WrongOnlyGame = {
   id: 'wrong', name: 'Wrong Answer Only', icon: '🚫', color: 'c4',
-  desc: 'উল্টো খেলা! সঠিক উত্তরটা এড়িয়ে ভুল অপশন বেছে নিতে হবে।',
+  desc: 'উল্টো খেলা! সঠিক উত্তর এড়িয়ে ভুল অপশন বেছে নাও।',
   mount(root) {
     packSetup(root, {
-      title: 'Wrong Answer Only', icon: '🚫', types: ['mcq'],
+      title: 'Wrong Answer Only', icon: '🚫', types: ['mcq'], promptKind: 'mcq',
       onStart: (items, timer) => new Session({ title: '🚫 Wrong Answer Only', items, timer, render: (q, api) => mcqRender(q, api, { invert: true }) }).mount(root)
     });
   }
 };
-
 const OppositesGame = {
   id: 'opposite', name: 'Opposite Words', icon: '🔁', color: 'c5',
-  desc: 'শব্দ দেখাও — students বিপরীত শব্দ বলবে, timer চলবে!',
+  desc: 'শব্দ দেখাও — students বিপরীত শব্দ বলবে!',
   mount(root) {
     packSetup(root, {
-      title: 'Opposite Words', icon: '🔁', types: ['opposite'],
+      title: 'Opposite Words', icon: '🔁', types: ['opposite'], promptKind: 'opposite',
       onStart: (items, timer) => new Session({ title: '🔁 Opposite Words', items, timer, render: (q, api) => typeRender({ prompt: q.word, big: true, banner: '🔁 Say the OPPOSITE!', q, api }) }).mount(root)
     });
   }
 };
-
 const QuizGame = {
   id: 'quiz', name: 'Classic Quiz', icon: '🧠', color: 'c6',
-  desc: 'সাধারণ MCQ quiz — সঠিক উত্তর বেছে নাও, score বানাও।',
+  desc: 'সাধারণ MCQ quiz — image/mp3/video প্রশ্নও support করে!',
   mount(root) {
     packSetup(root, {
-      title: 'Classic Quiz', icon: '🧠', types: ['mcq'],
+      title: 'Classic Quiz', icon: '🧠', types: ['mcq'], promptKind: 'mcq',
       onStart: (items, timer) => new Session({ title: '🧠 Classic Quiz', items, timer, render: (q, api) => mcqRender(q, api) }).mount(root)
     });
   }
